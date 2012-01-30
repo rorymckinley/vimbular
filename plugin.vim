@@ -27,25 +27,15 @@ ruby << EOF
 module Vimbular
   def self.match()
     find_windows
-    holding_regex = Vim::Buffer.current.line
-    if holding_regex =~ /\/(.+)\//
-      needle = Regexp.new($~[1])
+
+    if needle = find_needle
       haystack = Vim::Window[@haystack_id].buffer[1]
-      match_positions = []
-      haystack_offset = 0
-      while haystack =~ needle
-        match_positions << $~.offset(0).map {|pos| pos + haystack_offset}
-        haystack = haystack.slice(Range.new($~.offset(0).last,-1))
-        haystack_offset = $~.offset(0).last + haystack_offset
-      end
-      VIM::command("#{@results_id} wincmd w")
-      VIM::command('normal! dG')
-      VIM::command('syntax clear')
-      Vim::Window[@results_id].buffer.line = Vim::Window[@haystack_id].buffer[1]
-      match_positions.each do |pos|
-        highlight_string = "syntax region Todo start=/\\%#{pos[0]+1}c/ end=/\\%#{pos[1]+1}c/"
-        VIM::command(highlight_string)
-      end
+
+      match_positions = find_matches(needle, haystack)
+
+      initialise_results
+
+      highlight_matches(match_positions)
     end
   end
 
@@ -61,6 +51,35 @@ module Vimbular
         @results_id = window
       end
     end
+  end
+
+  def self.initialise_results
+    VIM::command("#{@results_id} wincmd w")
+    VIM::command('normal! dG')
+    VIM::command('syntax clear')
+    Vim::Window[@results_id].buffer.line = Vim::Window[@haystack_id].buffer[1]
+  end
+
+  def self.highlight_matches(match_positions)
+    match_positions.each do |pos|
+      highlight_string = "syntax region Todo start=/\\%#{pos[0]+1}c/ end=/\\%#{pos[1]+1}c/"
+      VIM::command(highlight_string)
+    end
+  end
+
+  def self.find_matches(needle, haystack)
+    match_positions = []
+    haystack_offset = 0
+    while haystack =~ needle
+      match_positions << $~.offset(0).map {|pos| pos + haystack_offset}
+      haystack = haystack.slice(Range.new($~.offset(0).last,-1))
+      haystack_offset = $~.offset(0).last + haystack_offset
+    end
+    match_positions
+  end
+
+  def self.find_needle
+    Vim::Buffer.current.line =~ /\/(.+)\// ? Regexp.new($~[1]) : nil
   end
 end
 EOF
