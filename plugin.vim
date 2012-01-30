@@ -53,18 +53,8 @@ module Vimbular
     end
   end
 
-  def self.initialise_results
-    VIM::command("#{@results_id} wincmd w")
-    VIM::command('normal! dG')
-    VIM::command('syntax clear')
-    Vim::Window[@results_id].buffer.line = Vim::Window[@haystack_id].buffer[1]
-  end
-
-  def self.highlight_matches(match_positions)
-    match_positions.each do |pos|
-      highlight_string = "syntax region Todo start=/\\%#{pos[0]+1}c/ end=/\\%#{pos[1]+1}c/"
-      VIM::command(highlight_string)
-    end
+  def self.find_needle
+    Vim::Buffer.current.line =~ /\/(.+)\// ? Regexp.new($~[1]) : nil
   end
 
   def self.find_matches(needle, haystack)
@@ -78,8 +68,18 @@ module Vimbular
     match_positions
   end
 
-  def self.find_needle
-    Vim::Buffer.current.line =~ /\/(.+)\// ? Regexp.new($~[1]) : nil
+  def self.initialise_results
+    VIM::command("#{@results_id} wincmd w")
+    VIM::command('normal! dG')
+    VIM::command('syntax clear')
+    Vim::Window[@results_id].buffer.line = Vim::Window[@haystack_id].buffer[1]
+  end
+
+  def self.highlight_matches(match_positions)
+    match_positions.each do |pos|
+      highlight_string = "syntax region Todo start=/\\%#{pos[0]+1}c/ end=/\\%#{pos[1]+1}c/"
+      VIM::command(highlight_string)
+    end
   end
 end
 EOF
